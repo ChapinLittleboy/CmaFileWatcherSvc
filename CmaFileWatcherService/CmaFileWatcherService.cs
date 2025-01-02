@@ -1,9 +1,9 @@
-﻿using System;
-using System.IO;
-using System.ServiceProcess;
-using Dapper;
+﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using Syncfusion.XlsIO;
+using System;
+using System.IO;
+using System.ServiceProcess;
 
 namespace CmaFileWatcherService
 {
@@ -74,6 +74,12 @@ namespace CmaFileWatcherService
                     string SubmittedBy = worksheet.Range["M3"].Text;
                     DateTime startDate = DateTime.Now;
                     DateTime endDate = DateTime.Now;
+                    string promoTermsText = worksheet.Range["J129"].DisplayText;
+                    string promoFreightTermsText = worksheet.Range["J130"].DisplayText;
+                    string promoFreightMinimumsText = worksheet.Range["J131"].DisplayText;
+                    string PcfTypeText = worksheet.Range["J132"].DisplayText;
+
+
 
 
 
@@ -137,7 +143,11 @@ namespace CmaFileWatcherService
                                                     Site = site,
                                                     Corp_Flag = corpFlag,
                                                     CmaFileName = cmaFilename,
-                                                    Status = status
+                                                    Status = status,
+                                                    PromoTermsText = promoTermsText,
+                                                    PromoFreightTermsText = promoFreightTermsText,
+                                                    PromoFreightMinimumsText = promoFreightMinimumsText,
+                                                    PcfTypeText = PcfTypeText
                                                 });*/
 
 
@@ -165,9 +175,9 @@ namespace CmaFileWatcherService
                             // Perform the combined insert
                             string combinedQuery = @"
             INSERT INTO Chap_CmaItems 
-            (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, Corp_flag, CmaFilename, Status, Item, Description, SellPrice)
+            (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, PromoFreightMinimumText, PcfTypeText)
             VALUES 
-            (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item, @Description, @SellPrice)";
+            (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText)";
 
                             connection.Execute(combinedQuery, new
                             {
@@ -184,7 +194,11 @@ namespace CmaFileWatcherService
                                 Status = status,
                                 Item = item,
                                 Description = description,
-                                SellPrice = sellPrice
+                                SellPrice = sellPrice,
+                                PromoTermsText = promoTermsText,
+                                PromoFreightTermsText = promoFreightTermsText,
+                                PromoFreightMinimumsText = promoFreightMinimumsText,
+                                PcfTypeText = PcfTypeText
                             });
 
                             // Move to the next row
