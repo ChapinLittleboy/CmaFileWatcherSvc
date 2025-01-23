@@ -91,21 +91,51 @@ namespace CmaFileWatcherService
                     IWorkbook workbook = application.Workbooks.Open(inputStream);
                     IWorksheet worksheet = workbook.Worksheets["CMA Template"];
 
+                    // Find the row that contains "Corporate Customer Number"
+                    // Use that to determine what row  
+                    int rowNumber = 0;
+                    for (int i = 1; i <= worksheet.Rows.Length; i++)
+                    {
+                        if (worksheet.Range["A" + i].DisplayText == "Corporate Customer Name")
+                        {
+                            rowNumber = i;
+                            break;
+                        }
+                    }
+
+                    string promoTermsText = "";
+                    string promoFreightTermsText = "";
+                    string promoFreightMinimumsText = "";
+                    string PcfTypeText = "";
+                    string promoFreightTermsOtherAmtText = "";
+
                     // Extract data (example: Customer Name from cell A1)
-                    string customerNumber = worksheet.Range["B7"].DisplayText;
-                    string corpNumber = worksheet.Range["B6"].DisplayText;
-                    string customerName = worksheet.Range["B5"].DisplayText;
+                    //string customerNumber = worksheet.Range["B7"].DisplayText;
+                    string customerNumber = worksheet.Range["B" + (rowNumber + 2)].DisplayText;
+                    string corpNumber = worksheet.Range["B" + (rowNumber + 1)].DisplayText;
+                    string customerName = worksheet.Range["B" + rowNumber].DisplayText;
                     customerNumber = !string.IsNullOrEmpty(corpNumber) ? corpNumber : customerNumber;
                     int corpFlag = !string.IsNullOrEmpty(corpNumber) ? 1 : 0;
-                    string buyingGroup = worksheet.Range["K7"].DisplayText;
-                    string SubmittedBy = worksheet.Range["M7"].Text;
+                    string buyingGroup = worksheet.Range["K" + (rowNumber + 2)].DisplayText;
+                    string SubmittedBy = worksheet.Range["M" + (rowNumber + 2)].Text;
                     DateTime startDate = DateTime.Now;
                     DateTime endDate = DateTime.Now;
-                    string promoTermsText = worksheet.Range["F2"].DisplayText;
-                    string promoFreightTermsText = worksheet.Range["C2"].DisplayText;
-                    string promoFreightMinimumsText = worksheet.Range["D2"].DisplayText;
-                    string PcfTypeText = worksheet.Range["B2"].DisplayText;
-                    string promoFreightTermsOtherAmtText = worksheet.Range["D3"].DisplayText;
+                    if (rowNumber != 1)  // this must be a new CMA format
+                    {
+                        promoTermsText = worksheet.Range["F2"].DisplayText;
+                        promoFreightTermsText = worksheet.Range["C2"].DisplayText;
+                        promoFreightMinimumsText = worksheet.Range["D2"].DisplayText;
+                        PcfTypeText = worksheet.Range["B2"].DisplayText;
+                        promoFreightTermsOtherAmtText = worksheet.Range["D3"].DisplayText;
+                    }
+                    else  // original format did not have these fields
+                    {
+                        promoTermsText = "";
+                        promoFreightTermsText = "";
+                        promoFreightMinimumsText = "";
+                        PcfTypeText = "";
+                        promoFreightTermsOtherAmtText = "";
+                    }
 
 
 
@@ -114,10 +144,10 @@ namespace CmaFileWatcherService
                     string site = "BAT";
 
                     string cmaFilename = Path.GetFileName(filePath);
-                    string status = "N";   // New
+                    string status = "N"; // New
 
 
-                    object cellValue = worksheet.Range["P5"].Value;
+                    object cellValue = worksheet.Range["P" + (rowNumber + 0)].Value;
                     if (cellValue != null && DateTime.TryParse(cellValue.ToString(), out DateTime startDateTime))
                     {
                         // Successfully parsed the date
@@ -132,7 +162,7 @@ namespace CmaFileWatcherService
                         WriteLog("Unable to convert Start date");
                     }
 
-                    object cellValue2 = worksheet.Range["P7"].Value;
+                    object cellValue2 = worksheet.Range["P" + (rowNumber + 2)].Value;
                     if (cellValue != null && DateTime.TryParse(cellValue2.ToString(), out DateTime endDateTime))
                     {
                         // Successfully parsed the date
@@ -147,6 +177,7 @@ namespace CmaFileWatcherService
                     }
 
 
+
                     // Insert into SQL using Dapper
                     using (SqlConnection connection = new SqlConnection("Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
                     {
@@ -157,29 +188,9 @@ namespace CmaFileWatcherService
                             new { CustNum = customerNumber }
                         );
 
-                        /*                        var query = "INSERT INTO Chap_CmaItems (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, Corp_flag, CmaFilename, Status)" +
-                                                            " VALUES (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @cmaFilename, @status)";
-                                                connection.Execute(query, new
-                                                {
-                                                    Cust_name = customerName,
-                                                    Cust_num = customerNumber,
-                                                    CMA_Sequence = nextSequence,
-                                                    BuyingGroup = buyingGroup,
-                                                    StartDate = startDate,
-                                                    EndDate = endDate.Date,
-                                                    SubmittedBy = SubmittedBy,
-                                                    Site = site,
-                                                    Corp_Flag = corpFlag,
-                                                    CmaFileName = cmaFilename,
-                                                    Status = status,
-                                                    PromoTermsText = promoTermsText,
-                                                    PromoFreightTermsText = promoFreightTermsText,
-                                                    PromoFreightMinimumsText = promoFreightMinimumsText,
-                                                    PcfTypeText = PcfTypeText
-                                                });*/
 
+                        int currentRow = rowNumber + 5; // Start from 5 rows below the "Corporate Customer Name" row
 
-                        int currentRow = 10; // Start from row 6
                         while (!string.IsNullOrEmpty(worksheet.Range["B" + currentRow].Text))
                         {
                             // Extract Detail Information
