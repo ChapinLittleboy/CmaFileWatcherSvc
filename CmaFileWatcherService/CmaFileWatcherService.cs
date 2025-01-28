@@ -18,6 +18,10 @@ namespace CmaFileWatcherService
     {
         private FileSystemWatcher _fileWatcher;
         private string _folderPath;
+        private string CustNum; // used for renaming
+        private string CorpNum; // used for renaming
+        private string archiveName;
+
 
         public CmaFileWatcherService()
         {
@@ -31,8 +35,11 @@ namespace CmaFileWatcherService
         private void LoadConfiguration()
         {
             var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile("config.ini");
-            _folderPath = data["Settings"]["WatchFolder"];
+            IniData data = parser.ReadFile(@"\\ciiws01\Inetpub\CMAInbound\config.ini");
+            //_folderPath = data["Settings"]["WatchFolder"];
+
+            // Change the folder to a network folder
+            _folderPath = @"\\ciiws01\Inetpub\CMAInbound";
         }
 
         private void InitializeWatcher()
@@ -91,18 +98,27 @@ namespace CmaFileWatcherService
                     IWorkbook workbook = application.Workbooks.Open(inputStream);
                     IWorksheet worksheet = workbook.Worksheets["CMA Template"];
 
-                    // Find the row that contains "Corporate Customer Number"
+                    // Find the row that contains a valid date in column 
                     // Use that to determine what row  
-                    int rowNumber = 0;
-                    for (int i = 1; i <= worksheet.Rows.Length; i++)
+                    int rowNumber = 1;
+                    while (true)
                     {
-                        if (worksheet.Range["A" + i].DisplayText == "Corporate Customer Name")
+                        // Get the cell's value as text
+                        var cellValueP = worksheet.Range["P" + rowNumber].DisplayText;
+
+                        // Check if it's a valid date
+                        if (DateTime.TryParse(cellValueP, out DateTime _))
                         {
-                            rowNumber = i;
+                            break; // Exit the loop when a valid date is found
+                        }
+
+                        rowNumber++; // Increment row index
+                        if (rowNumber > 10)
+                        {
                             break;
                         }
                     }
-
+                    WriteLog($"Firstrow set to: {rowNumber.ToString()}");
                     string promoTermsText = "";
                     string promoFreightTermsText = "";
                     string promoFreightMinimumsText = "";
@@ -112,7 +128,10 @@ namespace CmaFileWatcherService
                     // Extract data (example: Customer Name from cell A1)
                     //string customerNumber = worksheet.Range["B7"].DisplayText;
                     string customerNumber = worksheet.Range["B" + (rowNumber + 2)].DisplayText;
+                    CustNum = customerNumber;
                     string corpNumber = worksheet.Range["B" + (rowNumber + 1)].DisplayText;
+                    CorpNum = corpNumber;
+
                     string customerName = worksheet.Range["B" + rowNumber].DisplayText;
                     customerNumber = !string.IsNullOrEmpty(corpNumber) ? corpNumber : customerNumber;
                     int corpFlag = !string.IsNullOrEmpty(corpNumber) ? 1 : 0;
@@ -144,6 +163,12 @@ namespace CmaFileWatcherService
                     string site = "BAT";
 
                     string cmaFilename = Path.GetFileName(filePath);
+
+                    string dateTimeStamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+                    string prefix = string.IsNullOrEmpty(corpNumber) ? customerNumber : corpNumber;
+                    archiveName = $"{prefix}_{dateTimeStamp}_{cmaFilename}";
+
+
                     string status = "N"; // New
 
 
@@ -214,7 +239,7 @@ namespace CmaFileWatcherService
                             // Perform the combined insert
                             string combinedQuery = @"
             INSERT INTO Chap_CmaItems 
-            (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, PromoFreightMinimumText, PcfTypeText, PromoFreightMinimumsOtherText)
+            (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText)
             VALUES 
             (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText)";
 
@@ -229,7 +254,7 @@ namespace CmaFileWatcherService
                                 SubmittedBy = SubmittedBy,
                                 Site = site,
                                 Corp_flag = corpFlag,
-                                CmaFilename = cmaFilename,
+                                CmaFilename = archiveName,
                                 Status = status,
                                 Item = item,
                                 Description = description,
@@ -257,7 +282,47 @@ namespace CmaFileWatcherService
             }
 
             WriteLog($"File processed successfully: {filePath}");
+
+
+            ArchiveProcessedFile(filePath, archiveName, _folderPath);
         }
+
+
+        public void ArchiveProcessedFile(string filePath, string newFile, string _folderPath)
+        {
+            try
+            {
+                WriteLog($"new file: {newFile}");
+                // Ensure the Archive folder exists
+                string archiveFolderPath = Path.Combine(_folderPath, "Processed");
+                if (!Directory.Exists(archiveFolderPath))
+                {
+                    Directory.CreateDirectory(archiveFolderPath);
+                }
+
+                // Get the original file name and extension
+                // string originalFileName = Path.GetFileName(filePath);
+                // string originalExtension = Path.GetExtension(filePath);
+
+                // Prepare the new file name
+                // string dateTimeStamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+                // string prefix = string.IsNullOrEmpty(corpNumber) ? customerNumber : corpNumber;
+                // string newFileName = $"{prefix}_{dateTimeStamp}_{originalFileName}";
+
+                // Combine the new file path
+                string newFilePath = Path.Combine(archiveFolderPath, newFile);
+                WriteLog($"new file: {newFilePath}");
+                // Move and rename the file
+                File.Move(filePath, newFilePath);
+
+                Console.WriteLine($"File successfully archived to: {newFile}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while archiving the file: {ex.Message}");
+            }
+        }
+
 
         private void WriteLog(string message)
         {
