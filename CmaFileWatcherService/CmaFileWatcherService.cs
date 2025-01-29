@@ -13,6 +13,10 @@ namespace CmaFileWatcherService
     // cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
     // sc delete CmaFileWatcherService
     // sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe"
+    // sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
+    // sc start CmaFileWatcherService
+    // sc stop CmaFileWatcherService
+    // sc query CmaFileWatcherService
 
     public partial class CmaFileWatcherService : ServiceBase
     {
@@ -177,14 +181,14 @@ namespace CmaFileWatcherService
                     {
                         // Successfully parsed the date
 
-                        WriteLog($"Startdate successfully set to: {startDateTime.ToShortDateString()}");
+                        //WriteLog($"Startdate successfully set to: {startDateTime.ToShortDateString()}");
                         startDate = startDateTime;
 
                     }
                     else
                     {
                         // Handle cases where the cell does not contain a valid date
-                        WriteLog("Unable to convert Start date");
+                        WriteLog($"Unable to convert Start date {cellValue}");
                     }
 
                     object cellValue2 = worksheet.Range["P" + (rowNumber + 2)].Value;
@@ -192,13 +196,13 @@ namespace CmaFileWatcherService
                     {
                         // Successfully parsed the date
 
-                        WriteLog($"Enddate successfully set to: {endDateTime.ToShortDateString()}");
+                        //WriteLog($"Enddate successfully set to: {endDateTime.ToShortDateString()}");
                         endDate = endDateTime;
                     }
                     else
                     {
                         // Handle cases where the cell does not contain a valid date
-                        WriteLog("Unable to convert End date");
+                        WriteLog($"Unable to convert End date {cellValue}");
                     }
 
 
@@ -272,12 +276,32 @@ namespace CmaFileWatcherService
 
 
 
+                        // All records have been inserted so let's process them and create the PCF
+                        var parameters = new { CmaName = archiveName };
+                        connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
 
 
+                        var pcfNumber = connection.QuerySingleOrDefault<string>(
+                            "SELECT TOP 1 PCFNumber FROM Chap_CmaItems WHERE cmaFileName = @CmaName AND PCFNumber IS NOT NULL",
+                            parameters);
+
+                        if (!string.IsNullOrEmpty(pcfNumber))
+                        {
+                            Console.WriteLine($"PCFNumber created: {pcfNumber}"); // Or log it
+                            WriteLog($"PCF {pcfNumber} created for CMA {cmaFilename} {archiveName}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("No PCFNumber found for logging.");
+                            WriteLog($"PCF not created for CMA {cmaFilename} {archiveName}");
+                        }
 
 
 
                     }
+
+
+
                 }
             }
 
@@ -292,7 +316,7 @@ namespace CmaFileWatcherService
         {
             try
             {
-                WriteLog($"new file: {newFile}");
+                //WriteLog($"new file: {newFile}");
                 // Ensure the Archive folder exists
                 string archiveFolderPath = Path.Combine(_folderPath, "Processed");
                 if (!Directory.Exists(archiveFolderPath))
@@ -311,7 +335,7 @@ namespace CmaFileWatcherService
 
                 // Combine the new file path
                 string newFilePath = Path.Combine(archiveFolderPath, newFile);
-                WriteLog($"new file: {newFilePath}");
+                //WriteLog($"new file: {newFilePath}");
                 // Move and rename the file
                 File.Move(filePath, newFilePath);
 
@@ -326,7 +350,7 @@ namespace CmaFileWatcherService
 
         private void WriteLog(string message)
         {
-            string logPath = @"C:\CMAInbound\CmaFileWatcherService.txt";
+            string logPath = @"\\ciiws01\CMAInbound\CmaFileWatcherService.log";
             using (StreamWriter writer = new StreamWriter(logPath, true))
             {
                 writer.WriteLine($"{DateTime.Now}: {message}");
