@@ -55,32 +55,32 @@
                     // Step 2: Check PcfTypeText rules
                     if (string.IsNullOrWhiteSpace(pcfTypeText))
                     {
-                        validationErrors.Add($"CMA ID {_cmaFileName}: Pcf Type is required");
+                        validationErrors.Add($"Pcf Type is required");
                     }
 
                     if (pcfTypeText.StartsWith("PD") || pcfTypeText.StartsWith("PW"))
                     {
                         if (string.IsNullOrWhiteSpace(promoTermsText))
                             validationErrors.Add(
-                                $"CMA ID {_cmaFileName}: PromoTermsText is required when Pcf Type is 'PD' or 'PW'.");
+                                $"Promo Termsis required when Pcf Type is 'PD' or 'PW'.");
                         if (string.IsNullOrWhiteSpace(promoFreightTermsText))
                             validationErrors.Add(
-                                $"CMA ID {_cmaFileName}: PromoFreightTermsText is required when  Pcf Type is 'PD' or 'PW'.");
+                                $"Promo Freight Terms is required when  Pcf Type is 'PD' or 'PW'.");
                         if (string.IsNullOrWhiteSpace(promoFreightMinimumsText))
                             validationErrors.Add(
-                                $"CMA ID {_cmaFileName}: PromoFreightMinimumsText is required when Pcf Type is 'PD' or 'PW'.");
-                        if (string.IsNullOrWhiteSpace(promoFreightMinimumsOtherText))
-                            validationErrors.Add(
-                                $"CMA ID {_cmaFileName}: PromoFreightMinimumsOtherText is required when Pcf Type is 'PD' or 'PW'.");
+                                $"Promo Freight Minimums is required when Pcf Type is 'PD' or 'PW'.");
+                        //if (string.IsNullOrWhiteSpace(promoFreightMinimumsOtherText))
+                        //   validationErrors.Add(
+                        //       $"CMA ID {_cmaFileName}: PromoFreightMinimumsOtherText is required when Pcf Type is 'PD' or 'PW'.");
                     }
 
                     // Step 3: Validate Dates
                     if (!startDate.HasValue)
-                        validationErrors.Add($"CMA ID {_cmaFileName}: StartDate is required.");
+                        validationErrors.Add($"StartDate is required.");
                     if (!endDate.HasValue)
-                        validationErrors.Add($"CMA ID {_cmaFileName}: EndDate is required.");
+                        validationErrors.Add($"EndDate is required.");
                     if (startDate.HasValue && endDate.HasValue && startDate > endDate)
-                        validationErrors.Add($"CMA ID {_cmaFileName}: StartDate cannot be after EndDate.");
+                        validationErrors.Add($"StartDate cannot be after EndDate.");
                 }
 
 
@@ -93,7 +93,7 @@
 
                 if (progControlConflicts > 0)
                 {
-                    validationErrors.Add($"CMA ID {_cmaFileName}: Conflict: Existing PCF record for Customer {record.Cust_num} and Item {record.Item} has same start date. You must use a different date.");
+                    validationErrors.Add($"Date Conflict: Existing PCF record for Customer {record.Cust_num} and Item {record.Item} has same start date. You must use a different date.");
                 }
 
                 // Step 5: Check Items in item_mst
@@ -102,16 +102,19 @@
 
                 if (itemCheck == null)
                 {
-                    validationErrors.Add($"CMA ID {_cmaFileName}: Item {record.Item} does not exist in Syteline.");
+                    validationErrors.Add($"Item {record.Item} does not exist in Syteline. You must remove this item from the CMA");
                 }
                 else if (itemCheck.stat == "O")
                 {
-                    validationErrors.Add($"CMA ID {_cmaFileName}: Item {record.Item} is obsolete in Syteline.");
+                    validationErrors.Add($"Item {record.Item} is obsolete in Syteline. You must remove this item from the CMA");
                 }
             }
 
             return validationErrors;
         }
+
+
+
     }
 
 }

@@ -4,8 +4,10 @@ using IniParser.Model;
 using Microsoft.Data.SqlClient;
 using Syncfusion.XlsIO;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.ServiceProcess;
+using System.Text.RegularExpressions;
 
 
 namespace CmaFileWatcherService
@@ -26,6 +28,8 @@ namespace CmaFileWatcherService
         private string CorpNum; // used for renaming
         private string archiveName;
         private string _pcfDatabase;
+        private string baseFilename;
+        private string SenderEmail;
 
 
         public CmaFileWatcherService()
@@ -94,9 +98,39 @@ namespace CmaFileWatcherService
             }
         }
 
+        static string GetBaseFilename(string filename)
+        {
+            // Find position of "_sentby_"
+            int index = filename.IndexOf("_sentby_");
+            if (index != -1)
+            {
+                return filename.Substring(0, index) + Path.GetExtension(filename);
+            }
+            return filename; // Return original if "_sentby_" is not found
+        }
+
+        static string GetSenderEmail(string filename)
+        {
+            // Use regex to extract the part after "_sentby_" and before the extension
+            //var match = Regex.Match(filename, @"_sentby_([\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,})");
+            //var match = Regex.Match(filename, @"_sentby_([\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,})\b");
+            var match = Regex.Match(filename, @"_sentby_([\w\.-]+@chapinmfg\.com)", RegexOptions.IgnoreCase);
+
+            return match.Success ? match.Groups[1].Value : "";
+        }
+
+
+
         private void ProcessExcelFile(string filePath)
         {
             bool cmaIsValid = false;
+
+            // If CMA was sent via email, let's get the original attachment name and sender's email
+
+            baseFilename = Path.GetFileName(GetBaseFilename(filePath));
+            SenderEmail = GetSenderEmail(filePath);
+
+            WriteLog(baseFilename);
 
             // Read Excel data using Syncfusion
             using (var inputStream = new FileStream(filePath, FileMode.Open))
@@ -185,7 +219,7 @@ namespace CmaFileWatcherService
 
                     string dateTimeStamp = DateTime.Now.ToString("yyyyMMddHHmmss");
                     string prefix = string.IsNullOrEmpty(corpNumber) ? customerNumber : corpNumber;
-                    archiveName = $"{prefix}_{dateTimeStamp}_{cmaFilename}";
+                    archiveName = $"{prefix}_{dateTimeStamp}_{baseFilename}";
 
 
                     string status = "N"; // New
@@ -258,9 +292,11 @@ namespace CmaFileWatcherService
                             // Perform the combined insert
                             string combinedQuery = @"
             INSERT INTO Chap_CmaItems 
-            (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText)
+            (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, 
+Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, 
+PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail)
             VALUES 
-            (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText)";
+            (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText, @SenderEmail)";
 
                             connection.Execute(combinedQuery, new
                             {
@@ -282,7 +318,8 @@ namespace CmaFileWatcherService
                                 PromoFreightTermsText = promoFreightTermsText,
                                 PromoFreightMinimumsText = promoFreightMinimumsText,
                                 PromoFreightMinimumsOtherText = promoFreightTermsOtherAmtText,
-                                PcfTypeText = PcfTypeText
+                                PcfTypeText = PcfTypeText,
+                                SenderEmail = SenderEmail
                             });
 
                             // Move to the next row
@@ -306,6 +343,8 @@ namespace CmaFileWatcherService
                                 WriteLog(error);
                             }
                             // Optionally, send an email or log the errors
+                            WriteLog($"Failure {SenderEmail}, {baseFilename}, {validationErrors.Count}");
+                            SendValidationFailureEmail(SenderEmail, baseFilename, validationErrors);
                         }
                         else
                         {
@@ -330,6 +369,8 @@ namespace CmaFileWatcherService
                         {
                             Console.WriteLine($"PCFNumber created: {pcfNumber}"); // Or log it
                             WriteLog($"PCF {pcfNumber} created for CMA {cmaFilename} {archiveName}");
+
+                            SendSuccessfulPCFCreationEmail(SenderEmail, baseFilename, pcfNumber);
                         }
                         else
                         {
@@ -397,5 +438,163 @@ namespace CmaFileWatcherService
                 writer.WriteLine($"{DateTime.Now}: {message}");
             }
         }
+
+
+        public void SendValidationFailureEmail(string senderEmail, string baseFileName, List<string> validationErrors)
+        {
+            // if (validationErrors == null || validationErrors.Count == 0)
+            //     return; // No errors, no need to send an email
+
+            // Construct email message
+            string emailSubject = $"CMA Validation Failed: {baseFileName}";
+            string emailBody = $@"
+Dear {senderEmail},
+
+Your CMA submission '{baseFileName}' failed validation due to the following issues:
+
+{string.Join("\n\n", validationErrors)}
+
+Please review the errors, make the necessary corrections, and resubmit the file.
+
+If you have any questions, please contact the SalesOps team.
+
+Best regards,  
+Sales Operations Team";
+
+
+            using (SqlConnection _dbConnection =
+                   new SqlConnection(
+                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+            {
+
+                // Send email using SQL Server Database Mail (dbMail)
+
+                try
+                {
+                    _dbConnection.Execute(@"
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'SalesOps',
+            @recipients = @RecipientEmail,
+            @subject = @EmailSubject,
+            @body = @EmailBody",
+                        new
+                        {
+                            RecipientEmail = senderEmail,
+                            EmailSubject = emailSubject,
+                            EmailBody = emailBody
+                        });
+
+                    WriteLog($"Email successfully sent to {senderEmail} for {baseFileName}.");
+                }
+                catch (Exception ex)
+                {
+                    WriteLog($"Error sending email: {ex.Message}");
+                }
+            }
+        }
+
+        public void SendValidationFailureEmailHtml(string senderEmail, string baseFileName, List<string> validationErrors)
+        {
+            if (validationErrors == null || validationErrors.Count == 0)
+                return; // No errors, no need to send an email
+
+            // Construct email message with line breaks
+            string emailSubject = $"CMA Validation Failed: {baseFileName}";
+
+            string emailBody = $@"
+Dear {senderEmail},<br><br>
+
+Your CMA submission '<b>{baseFileName}</b>' failed validation due to the following issues:<br><br>
+
+{string.Join("<br>", validationErrors)}<br><br>
+
+Please review the errors, make the necessary corrections, and resubmit the file.<br><br>
+
+If you have any questions, please contact the SalesOps team.<br><br>
+
+Best regards,<br>
+Sales Operations Team";
+
+
+            using (SqlConnection _dbConnection =
+                   new SqlConnection(
+                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+            {
+                // Send email using SQL Server Database Mail (dbMail)
+                _dbConnection.Execute(@"
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'SalesOps',
+            @recipients = @RecipientEmail,
+            @subject = @EmailSubject,
+            @body = @EmailBody",
+                    new
+                    {
+                        RecipientEmail = senderEmail,
+                        EmailSubject = emailSubject,
+                        EmailBody = emailBody
+                    });
+            }
+        }
+
+
+
+
+
+
+
+
+        public void SendSuccessfulPCFCreationEmail(string senderEmail, string baseFileName, string pcfNumber)
+        {
+            // if (validationErrors == null || validationErrors.Count == 0)
+            //     return; // No errors, no need to send an email
+
+            // Construct email message
+            string emailSubject = $"CMA {baseFileName}    PCF {pcfNumber} created";
+            string emailBody = $@"
+Dear {senderEmail},
+
+Your CMA submission with file '{baseFileName}' was successfully processed and a PCF was created. You can view the PCF on the www.ChapinPcfManager.com website for review.
+
+
+
+If you have any questions, please contact the SalesOps team.
+
+Best regards,  
+Sales Operations Team";
+
+
+            using (SqlConnection _dbConnection =
+                   new SqlConnection(
+                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+            {
+
+                // Send email using SQL Server Database Mail (dbMail)
+
+                try
+                {
+                    _dbConnection.Execute(@"
+        EXEC msdb.dbo.sp_send_dbmail
+            @profile_name = 'SalesOps',
+            @recipients = @RecipientEmail,
+            @subject = @EmailSubject,
+            @body = @EmailBody",
+                        new
+                        {
+                            RecipientEmail = senderEmail,
+                            EmailSubject = emailSubject,
+                            EmailBody = emailBody
+                        });
+
+                    WriteLog($"Email successfully sent to {senderEmail} for {baseFileName}.");
+                }
+                catch (Exception ex)
+                {
+                    WriteLog($"Error sending email: {ex.Message}");
+                }
+            }
+        }
+
+
     }
 }
+
