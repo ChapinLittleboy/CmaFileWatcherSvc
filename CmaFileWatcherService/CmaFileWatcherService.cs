@@ -25,6 +25,7 @@ namespace CmaFileWatcherService
         private string CustNum; // used for renaming
         private string CorpNum; // used for renaming
         private string archiveName;
+        private string _pcfDatabase;
 
 
         public CmaFileWatcherService()
@@ -44,6 +45,8 @@ namespace CmaFileWatcherService
 
             // Change the folder to a network folder
             _folderPath = @"\\ciiws01\Inetpub\CMAInbound";
+            _pcfDatabase = data["Settings"]["PcfDatabase"];
+            WriteLog($@"pcfdatabase = {_pcfDatabase}");
         }
 
         private void InitializeWatcher()
@@ -93,6 +96,8 @@ namespace CmaFileWatcherService
 
         private void ProcessExcelFile(string filePath)
         {
+            bool cmaIsValid = false;
+
             // Read Excel data using Syncfusion
             using (var inputStream = new FileStream(filePath, FileMode.Open))
             {
@@ -143,13 +148,23 @@ namespace CmaFileWatcherService
                     string SubmittedBy = worksheet.Range["M" + (rowNumber + 2)].Text;
                     DateTime startDate = DateTime.Now;
                     DateTime endDate = DateTime.Now;
+                    int DDrow = 1;
                     if (rowNumber != 1)  // this must be a new CMA format
                     {
-                        promoTermsText = worksheet.Range["F2"].DisplayText;
-                        promoFreightTermsText = worksheet.Range["C2"].DisplayText;
-                        promoFreightMinimumsText = worksheet.Range["D2"].DisplayText;
-                        PcfTypeText = worksheet.Range["B2"].DisplayText;
-                        promoFreightTermsOtherAmtText = worksheet.Range["D3"].DisplayText;
+                        if (worksheet.Range["A1"].DisplayText == "General Notes")
+                        {
+                            DDrow = 5;
+                        }
+                        else
+                        {
+                            DDrow = 2;
+                        }
+                        promoTermsText = worksheet.Range["F" + DDrow]?.DisplayText ?? "";
+                        promoFreightTermsText = worksheet.Range["C" + DDrow]?.DisplayText ?? "";
+                        promoFreightMinimumsText = worksheet.Range["D" + DDrow]?.DisplayText ?? "";
+                        PcfTypeText = worksheet.Range["B" + DDrow]?.DisplayText ?? "";
+                        promoFreightTermsOtherAmtText = worksheet.Range["D" + DDrow]?.DisplayText ?? "";  // Note this is the same cell as Promo Terms Text above
+
                     }
                     else  // original format did not have these fields
                     {
@@ -275,15 +290,41 @@ namespace CmaFileWatcherService
                         }
 
 
+                        /////////////////////////////// Time to validate the CMA records before trying to create the PCF
+
+                        var validator = new CMAValidator(connection, _pcfDatabase, archiveName);
+
+                        var validationErrors = validator.ValidateCMARecords();
+
+                        WriteLog($"Number of validation errors: {validationErrors.Count}");
+
+                        if (validationErrors.Count > 0)
+                        {
+                            WriteLog("Validation failed:");
+                            foreach (var error in validationErrors)
+                            {
+                                WriteLog(error);
+                            }
+                            // Optionally, send an email or log the errors
+                        }
+                        else
+                        {
+                            // Proceed with stored procedure call
+                            //connection.Execute("EXEC YourStoredProcedure");
+                            WriteLog("Validation passed");
+                            // All records have been inserted so let's process them and create the PCF
+                            var parameters = new { CmaName = archiveName };
+                            connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
+                        }
 
                         // All records have been inserted so let's process them and create the PCF
-                        var parameters = new { CmaName = archiveName };
-                        connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
+                        var parameters2 = new { CmaName = archiveName };
+                        //connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
 
 
                         var pcfNumber = connection.QuerySingleOrDefault<string>(
                             "SELECT TOP 1 PCFNumber FROM Chap_CmaItems WHERE cmaFileName = @CmaName AND PCFNumber IS NOT NULL",
-                            parameters);
+                            parameters2);
 
                         if (!string.IsNullOrEmpty(pcfNumber))
                         {

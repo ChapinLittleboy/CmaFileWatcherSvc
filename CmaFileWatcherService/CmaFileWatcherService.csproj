@@ -189,6 +189,7 @@
     <Compile Include="CmaFileWatcherService.Designer.cs">
       <DependentUpon>CmaFileWatcherService.cs</DependentUpon>
     </Compile>
+    <Compile Include="CMAValidator.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
