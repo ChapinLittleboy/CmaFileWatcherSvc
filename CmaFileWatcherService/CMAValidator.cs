@@ -89,7 +89,7 @@
                 SELECT COUNT(*) FROM [{_linkedServer}].[{_pcfDatabase}].dbo.ProgControl pc
                 JOIN [{_linkedServer}].[{_pcfDatabase}].dbo.pcitems pi ON CAST(pc.PcfNum AS NVARCHAR) = pi.PcfNumber
                 WHERE pc.Custnum = TRIM(@Cust_num) AND pc.ProgSDate = @StartDate
-                AND pi.ItemNum = @Item", new { record.Cust_num, StartDate = record.StartDate, record.Item }).FirstOrDefault();
+                AND pi.ItemNum = @Item AND isnull(pc.PCFStatus,0) <> 98", new { record.Cust_num, StartDate = record.StartDate, record.Item }).FirstOrDefault();
 
                 if (progControlConflicts > 0)
                 {

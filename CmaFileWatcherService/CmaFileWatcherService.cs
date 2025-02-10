@@ -124,6 +124,11 @@ namespace CmaFileWatcherService
         private void ProcessExcelFile(string filePath)
         {
             bool cmaIsValid = false;
+            bool isReplacementCMA = false;  // 
+            string existingPCF = string.Empty;
+            //int existingPCFint = 0;
+
+
 
             // If CMA was sent via email, let's get the original attachment name and sender's email
 
@@ -141,12 +146,23 @@ namespace CmaFileWatcherService
                     IWorkbook workbook = application.Workbooks.Open(inputStream);
                     IWorksheet worksheet = workbook.Worksheets["CMA Template"];
 
+                    //Let's start by seeing if this will be updating an existing PCF
+                    existingPCF = worksheet.Range["A2"].DisplayText;
+                    if (int.TryParse(existingPCF, out int existingPCFint))
+                    {
+                        isReplacementCMA = true;
+                    }
+                    else
+                    {
+                        isReplacementCMA = false;
+                    }
+
                     // Find the row that contains a valid date in column 
                     // Use that to determine what row  
                     int rowNumber = 1;
                     while (true)
                     {
-                        // Get the cell's value as text
+                        // Get the cell's value as text 
                         var cellValueP = worksheet.Range["P" + rowNumber].DisplayText;
 
                         // Check if it's a valid date
@@ -290,13 +306,16 @@ namespace CmaFileWatcherService
                             }
 
                             // Perform the combined insert
+                            int? replacesValue = (existingPCFint > 0) ? existingPCFint : (int?)null;
+
                             string combinedQuery = @"
             INSERT INTO Chap_CmaItems 
             (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, 
 Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, 
-PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail)
+PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail, ReplacesPCF)
             VALUES 
-            (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText, @SenderEmail)";
+            (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item
+, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText, @SenderEmail, @ReplacesPCF)";
 
                             connection.Execute(combinedQuery, new
                             {
@@ -319,7 +338,8 @@ PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmai
                                 PromoFreightMinimumsText = promoFreightMinimumsText,
                                 PromoFreightMinimumsOtherText = promoFreightTermsOtherAmtText,
                                 PcfTypeText = PcfTypeText,
-                                SenderEmail = SenderEmail
+                                SenderEmail = SenderEmail,
+                                ReplacesPCF = replacesValue  // This will be NULL if existingPCFint is not a positive integer
                             });
 
                             // Move to the next row
@@ -352,8 +372,23 @@ PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmai
                             //connection.Execute("EXEC YourStoredProcedure");
                             WriteLog("Validation passed");
                             // All records have been inserted so let's process them and create the PCF
-                            var parameters = new { CmaName = archiveName };
-                            connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
+                            if (existingPCFint > 0)
+                            {
+                                // then we are replacing a current PCF and resetting it to NEW
+                                // deletes the existing negative valued pcf and renames the current pcf to pcf * -1
+                                var parametersR = new { OriginalPcfNum = existingPCFint };
+                                connection.Execute("sp_ArchiveReplacedPCF", parametersR, commandType: System.Data.CommandType.StoredProcedure);
+
+                                // create the new pcf with the old pcf number
+                                var parametersN = new { CmaName = archiveName, PCFNum = existingPCFint };
+                                connection.Execute("CreatePcfFromChapCmaItems_sp", parametersN, commandType: System.Data.CommandType.StoredProcedure);
+                            }
+                            else
+                            {
+                                // create a new PCF
+                                var parameters = new { CmaName = archiveName, PCFNum = 0 };
+                                connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
+                            }
                         }
 
                         // All records have been inserted so let's process them and create the PCF
