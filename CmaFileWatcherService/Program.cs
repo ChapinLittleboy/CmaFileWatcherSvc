@@ -1,4 +1,5 @@
-﻿using System.ServiceProcess;
+﻿using Syncfusion.Licensing;
+using System.ServiceProcess;
 
 namespace CmaFileWatcherService
 {
@@ -9,6 +10,7 @@ namespace CmaFileWatcherService
         /// </summary>
         static void Main()
         {
+            SyncfusionLicenseProvider.RegisterLicense("Ngo9BigBOggjHTQxAR8/V1NDaF5cWWtCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdnWH1ecnVVRmJeVUN/WUA=");
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[]
             {

@@ -406,11 +406,40 @@ PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmai
                             WriteLog($"PCF {pcfNumber} created for CMA {cmaFilename} {archiveName}");
 
                             SendSuccessfulPCFCreationEmail(SenderEmail, baseFilename, pcfNumber);
+                            worksheet.Range["A2"].Text = pcfNumber;
+
+
+                            // Save the updated workbook back to the same file in the Processed folder
+                            string archiveFolderPath = Path.Combine(_folderPath, "Processed");
+                            if (!Directory.Exists(archiveFolderPath))
+                            {
+                                Directory.CreateDirectory(archiveFolderPath);
+                            }
+                            string newFilePath = Path.Combine(archiveFolderPath, archiveName);
+
+                            using (FileStream outputStream = new FileStream(newFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                workbook.SaveAs(outputStream);
+                            }
+
+
                         }
                         else
                         {
                             Console.WriteLine("No PCFNumber found for logging.");
                             WriteLog($"PCF not created for CMA {cmaFilename} {archiveName}");
+                            // Save the updated workbook back to the same file in the Processed folder
+                            string archiveFolderPath = Path.Combine(_folderPath, "Rejected");
+                            if (!Directory.Exists(archiveFolderPath))
+                            {
+                                Directory.CreateDirectory(archiveFolderPath);
+                            }
+                            string newFilePath = Path.Combine(archiveFolderPath, archiveName);
+
+                            using (FileStream outputStream = new FileStream(newFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                workbook.SaveAs(outputStream);
+                            }
                         }
 
 
@@ -425,7 +454,44 @@ PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmai
             WriteLog($"File processed successfully: {filePath}");
 
 
-            ArchiveProcessedFile(filePath, archiveName, _folderPath);
+            // ArchiveProcessedFile(filePath, archiveName, _folderPath);
+
+
+            // The file should be in either the Processed or Rejected folder.  If it is, we can delete from the CMAInbound folder
+            // Processed and Rejected folder paths
+            string processedFolder = Path.Combine(_folderPath, "Processed");
+            string rejectedFolder = Path.Combine(_folderPath, "Rejected");
+
+            // Paths where the file may be stored
+            string processedFilePath = Path.Combine(processedFolder, archiveName);
+            string rejectedFilePath = Path.Combine(rejectedFolder, archiveName);
+
+
+            // Check if the file exists in either folder before deleting the original
+            if (File.Exists(processedFilePath) || File.Exists(rejectedFilePath))
+            {
+                // Delete the original file
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    Console.WriteLine($"Original file deleted: {filePath}");
+                }
+                else
+                {
+                    Console.WriteLine("Original file does not exist, skipping deletion.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("File was not found in Processed or Rejected folders. Skipping deletion.");
+            }
+
+
+
+
+
+
+
         }
 
 
