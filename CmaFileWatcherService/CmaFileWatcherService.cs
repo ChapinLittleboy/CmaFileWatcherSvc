@@ -213,7 +213,7 @@ namespace CmaFileWatcherService
                         promoFreightTermsText = worksheet.Range["C" + DDrow]?.DisplayText ?? "";
                         promoFreightMinimumsText = worksheet.Range["D" + DDrow]?.DisplayText ?? "";
                         PcfTypeText = worksheet.Range["B" + DDrow]?.DisplayText ?? "";
-                        promoFreightTermsOtherAmtText = worksheet.Range["D" + DDrow]?.DisplayText ?? "";  // Note this is the same cell as Promo Terms Text above
+                        promoFreightTermsOtherAmtText = worksheet.Range["D" + (DDrow + 1)]?.DisplayText ?? "";  // Gets the amount from the next row
 
                     }
                     else  // original format did not have these fields
