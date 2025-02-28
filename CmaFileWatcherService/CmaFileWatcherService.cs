@@ -365,6 +365,15 @@ PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmai
                             // Optionally, send an email or log the errors
                             WriteLog($"Failure {SenderEmail}, {baseFilename}, {validationErrors.Count}");
                             SendValidationFailureEmail(SenderEmail, baseFilename, validationErrors);
+                            // Then delete the records in the Chap_CmaItems table for this CMA
+                            string deletesql = @"
+    DELETE FROM Chap_CmaItems
+    WHERE CmaFilename = @CmaFilename
+      AND PcfNumber IS NULL
+      AND Status = 'N'";
+
+                            connection.Execute(deletesql, new { CmaFilename = archiveName });
+
                         }
                         else
                         {
