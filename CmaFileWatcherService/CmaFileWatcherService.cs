@@ -30,6 +30,7 @@ namespace CmaFileWatcherService
         private string _pcfDatabase;
         private string baseFilename;
         private string SenderEmail;
+        private string GenNotes;
 
 
         public CmaFileWatcherService()
@@ -204,6 +205,8 @@ namespace CmaFileWatcherService
                         if (worksheet.Range["A1"].DisplayText == "General Notes")
                         {
                             DDrow = 5;
+                            GenNotes = worksheet.Range["B1"].DisplayText;
+
                         }
                         else
                         {
@@ -312,10 +315,11 @@ namespace CmaFileWatcherService
             INSERT INTO Chap_CmaItems 
             (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, 
 Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, 
-PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail, ReplacesPCF)
+PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail, ReplacesPCF, GenNotes)
             VALUES 
             (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item
-, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText, @SenderEmail, @ReplacesPCF)";
+, @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsText, @SenderEmail
+, @ReplacesPCF, @GenNotes)";
 
                             connection.Execute(combinedQuery, new
                             {
@@ -340,6 +344,8 @@ PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmai
                                 PcfTypeText = PcfTypeText,
                                 SenderEmail = SenderEmail,
                                 ReplacesPCF = replacesValue  // This will be NULL if existingPCFint is not a positive integer
+                                ,
+                                GenNotes = GenNotes
                             });
 
                             // Move to the next row
