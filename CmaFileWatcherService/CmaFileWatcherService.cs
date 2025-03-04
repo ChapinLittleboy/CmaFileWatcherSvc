@@ -6,6 +6,7 @@ using Syncfusion.XlsIO;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.ServiceProcess;
 using System.Text.RegularExpressions;
 
@@ -145,7 +146,37 @@ namespace CmaFileWatcherService
                 {
                     IApplication application = excelEngine.Excel;
                     IWorkbook workbook = application.Workbooks.Open(inputStream);
-                    IWorksheet worksheet = workbook.Worksheets["CMA Template"];
+                    // IWorksheet worksheet = workbook.Worksheets["CMA Template"];
+                    // Assuming workbook is already loaded
+                    IWorksheet worksheet = workbook.Worksheets
+                        .FirstOrDefault(ws => ws.Name.Equals("CMA Template", StringComparison.OrdinalIgnoreCase));
+
+                    if (worksheet == null)
+                    {
+                        WriteLog("Worksheet CMA Template not found");
+                        // Try the alternative name
+                        worksheet = workbook.Worksheets
+                            .FirstOrDefault(ws => ws.Name.Equals("CMA", StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (worksheet == null && workbook.Worksheets.Count > 0)
+                    {
+                        WriteLog("Worksheet CMA not found");
+
+                        // Fall back to the first worksheet if neither name was found
+                        worksheet = workbook.Worksheets[0];
+                    }
+
+                    // Now you can work with "worksheet"
+                    if (worksheet != null)
+                    {
+                        WriteLog("Worksheet selected: " + worksheet.Name);
+                    }
+                    else
+                    {
+                        WriteLog("No worksheets available in the workbook.");
+                    }
+
 
                     //Let's start by seeing if this will be updating an existing PCF
                     existingPCF = worksheet.Range["A2"].DisplayText;
