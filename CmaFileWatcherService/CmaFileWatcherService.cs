@@ -224,7 +224,7 @@ namespace CmaFileWatcherService
                     CorpNum = corpNumber;
 
                     string customerName = worksheet.Range["B" + rowNumber].DisplayText;
-                    customerNumber = !string.IsNullOrEmpty(corpNumber) ? corpNumber : customerNumber;
+                    customerNumber = !string.IsNullOrEmpty(customerNumber) ? customerNumber : corpNumber;
                     int corpFlag = !string.IsNullOrEmpty(corpNumber) ? 1 : 0;
                     string buyingGroup = worksheet.Range["K" + (rowNumber + 2)].DisplayText;
                     string SubmittedBy = worksheet.Range["M" + (rowNumber + 2)].Text;
