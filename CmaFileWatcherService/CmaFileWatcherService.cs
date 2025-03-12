@@ -4,15 +4,25 @@ using IniParser.Model;
 using Microsoft.Data.SqlClient;
 using Syncfusion.XlsIO;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CmaFileWatcherService
 {
+    // cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
+    // sc delete CmaFileWatcherService
+    // sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe"
+    // sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
+    // sc start CmaFileWatcherService
+    // sc stop CmaFileWatcherService
+    // sc query CmaFileWatcherService
+
     public partial class CmaFileWatcherService : ServiceBase
     {
         private FileSystemWatcher _fileWatcher;
@@ -27,11 +37,18 @@ namespace CmaFileWatcherService
         private int RowWithPcfTypeHeading = 1;
         private bool _debugMode;
 
+        private ConcurrentQueue<string> _fileQueue;
+        private SemaphoreSlim _semaphore;
+        private bool _isProcessing;
+
         public CmaFileWatcherService()
         {
             InitializeComponent();
             LoadConfiguration();
             InitializeWatcher();
+            _fileQueue = new ConcurrentQueue<string>();
+            _semaphore = new SemaphoreSlim(1, 1);
+            _isProcessing = false;
             _debugMode = Environment.GetEnvironmentVariable("DebugCMAWatcher")?.ToLower() == "true";
         }
 
@@ -73,6 +90,48 @@ namespace CmaFileWatcherService
         }
 
         private void OnNewExcelFile(object sender, FileSystemEventArgs e)
+        {
+            _fileQueue.Enqueue(e.FullPath);
+            WriteLog($"New file detected and enqueued: {e.FullPath}");
+            WriteDebugLog($"OnNewExcelFile: File enqueued at {e.FullPath}");
+
+            if (!_isProcessing)
+            {
+                _isProcessing = true;
+                ProcessQueue();
+            }
+        }
+
+        private async void ProcessQueue()
+        {
+            while (_fileQueue.TryDequeue(out string filePath))
+            {
+                await _semaphore.WaitAsync();
+                try
+                {
+                    WriteLog($"Processing file: {filePath}");
+                    WriteDebugLog($"ProcessQueue: Processing file at {filePath}");
+                    await ProcessExcelFile(filePath);
+                }
+                catch (Exception ex)
+                {
+                    WriteLog($"Error processing file {filePath}: {ex.Message}");
+                    WriteDebugLog($"ProcessQueue: Error processing file {filePath}: {ex.Message}");
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+            }
+            _isProcessing = false;
+        }
+
+
+
+
+
+
+        private void OnNewExcelFilexx(object sender, FileSystemEventArgs e)
         {
             try
             {
