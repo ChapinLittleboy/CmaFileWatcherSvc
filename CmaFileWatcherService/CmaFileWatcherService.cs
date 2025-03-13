@@ -91,15 +91,49 @@ namespace CmaFileWatcherService
 
         private void OnNewExcelFile(object sender, FileSystemEventArgs e)
         {
-            _fileQueue.Enqueue(e.FullPath);
-            WriteLog($"New file detected and enqueued: {e.FullPath}");
-            WriteDebugLog($"OnNewExcelFile: File enqueued at {e.FullPath}");
-
-            if (!_isProcessing)
+            Task.Run(async () =>
             {
-                _isProcessing = true;
-                ProcessQueue();
+                bool fileAccessible = await WaitForFileAccess(e.FullPath);
+                if (fileAccessible)
+                {
+                    _fileQueue.Enqueue(e.FullPath);
+                    WriteLog($"New file detected and enqueued: {e.FullPath}");
+                    WriteDebugLog($"OnNewExcelFile: File enqueued at {e.FullPath}");
+
+                    if (!_isProcessing)
+                    {
+                        _isProcessing = true;
+                        ProcessQueue();
+                    }
+                }
+                else
+                {
+                    WriteLog($"File not accessible after multiple attempts: {e.FullPath}");
+                    WriteDebugLog($"OnNewExcelFile: File not accessible after multiple attempts: {e.FullPath}");
+                }
+            });
+        }
+
+        private async Task<bool> WaitForFileAccess(string filePath, int maxRetries = 5, int delayMilliseconds = 1000)
+        {
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    using (FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                    {
+                        if (stream.Length > 0)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                catch (IOException)
+                {
+                    await Task.Delay(delayMilliseconds);
+                }
             }
+            return false;
         }
 
         private async void ProcessQueue()
