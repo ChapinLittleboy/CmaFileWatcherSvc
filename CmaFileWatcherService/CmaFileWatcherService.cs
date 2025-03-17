@@ -55,8 +55,8 @@ namespace CmaFileWatcherService
         private void LoadConfiguration()
         {
             var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(@"\\ciiws01\Inetpub\CMAInbound\config.ini");
-            _folderPath = @"\\ciiws01\Inetpub\CMAInbound";
+            IniData data = parser.ReadFile(@"\\ciiedi01\SendDocs\CMAInbound\config.ini");
+            _folderPath = @"\\ciiedi01\SendDocs\CMAInbound";
             _pcfDatabase = data["Settings"]["PcfDatabase"];
             WriteLog($"pcfdatabase = {_pcfDatabase}");
             WriteDebugLog($"pcfdatabase = {_pcfDatabase}");
@@ -521,7 +521,7 @@ namespace CmaFileWatcherService
 
         private void WriteLog(string message)
         {
-            string logPath = @"\\ciiws01\CMAInbound\CmaFileWatcherService.log";
+            string logPath = @"\\ciiedi01\SendDocs\CMAInbound\CmaFileWatcherService.log";
             using (StreamWriter writer = new StreamWriter(logPath, true))
             {
                 writer.WriteLine($"{DateTime.Now}: {message}");
@@ -532,7 +532,7 @@ namespace CmaFileWatcherService
         {
             if (_debugMode)
             {
-                string debugLogPath = @"\\ciiws01\CMAInbound\debug.log";
+                string debugLogPath = @"\\ciiedi01\SendDocs\CMAInbound\debug.log";
                 using (StreamWriter writer = new StreamWriter(debugLogPath, true))
                 {
                     writer.WriteLine($"{DateTime.Now}: {message}");
