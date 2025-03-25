@@ -15,13 +15,15 @@ using System.Threading.Tasks;
 
 namespace CmaFileWatcherService
 {
-    // cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
-    // sc stop CmaFileWatcherService
-    // sc delete CmaFileWatcherService
-    // sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
-    // sc start CmaFileWatcherService
+    /*
+    cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
+    sc stop CmaFileWatcherService
+    sc delete CmaFileWatcherService
+    sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
+    sc start CmaFileWatcherService
 
-    // sc query CmaFileWatcherService
+    sc query CmaFileWatcherService
+    */
 
     public partial class CmaFileWatcherService : ServiceBase
     {
@@ -206,8 +208,10 @@ namespace CmaFileWatcherService
                     {
                         IApplication application = excelEngine.Excel;
                         IWorkbook workbook = application.Workbooks.Open(inputStream);
-                        IWorksheet worksheet = workbook.Worksheets.FirstOrDefault(ws => ws.Name.Equals("CMA Template", StringComparison.OrdinalIgnoreCase))
-                                               ?? workbook.Worksheets.FirstOrDefault(ws => ws.Name.Equals("CMA", StringComparison.OrdinalIgnoreCase))
+                        IWorksheet worksheet = workbook.Worksheets.FirstOrDefault(ws =>
+                                                   ws.Name.Equals("CMA Template", StringComparison.OrdinalIgnoreCase))
+                                               ?? workbook.Worksheets.FirstOrDefault(ws =>
+                                                   ws.Name.Equals("CMA", StringComparison.OrdinalIgnoreCase))
                                                ?? workbook.Worksheets.FirstOrDefault();
 
                         if (worksheet == null)
@@ -222,7 +226,8 @@ namespace CmaFileWatcherService
 
                         existingPCF = worksheet.Range["A2"].DisplayText;
                         isReplacementCMA = int.TryParse(existingPCF, out int existingPCFint);
-                        WriteDebugLog($"ProcessExcelFile: existingPCF = {existingPCF}, isReplacementCMA = {isReplacementCMA}");
+                        WriteDebugLog(
+                            $"ProcessExcelFile: existingPCF = {existingPCF}, isReplacementCMA = {isReplacementCMA}");
 
                         int rowNumber = 1;
                         while (true)
@@ -232,12 +237,14 @@ namespace CmaFileWatcherService
                             {
                                 break;
                             }
+
                             rowNumber++;
                             if (rowNumber > 10)
                             {
                                 break;
                             }
                         }
+
                         WriteLog($"Firstrow set to: {rowNumber}");
                         WriteDebugLog($"ProcessExcelFile: Firstrow set to: {rowNumber}");
 
@@ -249,28 +256,37 @@ namespace CmaFileWatcherService
                             {
                                 break;
                             }
+
                             RowWithPcfTypeHeading++;
                             if (RowWithPcfTypeHeading > 10)
                             {
                                 break;
                             }
                         }
+
                         WriteDebugLog($"ProcessExcelFile: RowWithPcfTypeHeading set to: {RowWithPcfTypeHeading}");
 
                         string promoTermsText = worksheet.Range["F" + (rowNumber != 1 ? 5 : 2)]?.DisplayText ?? "";
-                        WriteDebugLog($"PromoTermsText extracted from Cell F{(rowNumber != 1 ? 5 : 2)}: {promoTermsText}");
+                        WriteDebugLog(
+                            $"PromoTermsText extracted from Cell F{(rowNumber != 1 ? 5 : 2)}: {promoTermsText}");
 
-                        string promoFreightTermsText = worksheet.Range["C" + (rowNumber != 1 ? 5 : 2)]?.DisplayText ?? "";
-                        WriteDebugLog($"PromoFreightTermsText extracted from Cell C{(rowNumber != 1 ? 5 : 2)}: {promoFreightTermsText}");
+                        string promoFreightTermsText =
+                            worksheet.Range["C" + (rowNumber != 1 ? 5 : 2)]?.DisplayText ?? "";
+                        WriteDebugLog(
+                            $"PromoFreightTermsText extracted from Cell C{(rowNumber != 1 ? 5 : 2)}: {promoFreightTermsText}");
 
-                        string promoFreightMinimumsText = worksheet.Range["D" + (rowNumber != 1 ? 5 : 2)]?.DisplayText ?? "";
-                        WriteDebugLog($"promoFreightMinimumsText extracted from Cell D{(rowNumber != 1 ? 5 : 2)}: {promoFreightMinimumsText}");
+                        string promoFreightMinimumsText =
+                            worksheet.Range["D" + (rowNumber != 1 ? 5 : 2)]?.DisplayText ?? "";
+                        WriteDebugLog(
+                            $"promoFreightMinimumsText extracted from Cell D{(rowNumber != 1 ? 5 : 2)}: {promoFreightMinimumsText}");
 
                         string PcfTypeText = worksheet.Range["B" + (rowNumber != 1 ? 5 : 2)]?.DisplayText ?? "";
                         WriteDebugLog($"PcfTypeText extracted from Cell B{(rowNumber != 1 ? 5 : 2)}: {PcfTypeText}");
 
-                        string promoFreightTermsOtherAmtText = worksheet.Range["D" + (rowNumber != 1 ? 6 : 3)]?.DisplayText ?? "";
-                        WriteDebugLog($"promoFreightTermsOtherAmtText extracted from Cell D{(rowNumber != 1 ? 5 : 2)}: {promoFreightTermsOtherAmtText}");
+                        string promoFreightTermsOtherAmtText =
+                            worksheet.Range["D" + (rowNumber != 1 ? 6 : 3)]?.DisplayText ?? "";
+                        WriteDebugLog(
+                            $"promoFreightTermsOtherAmtText extracted from Cell D{(rowNumber != 1 ? 5 : 2)}: {promoFreightTermsOtherAmtText}");
 
 
                         string customerNumber = worksheet.Range["B" + (rowNumber + 2)].DisplayText;
@@ -307,7 +323,8 @@ namespace CmaFileWatcherService
                         DateTime startDate = DateTime.Now;
                         DateTime endDate = DateTime.Now;
 
-                        WriteDebugLog($"ProcessExcelFile: customerNumber = {customerNumber}, corpNumber = {corpNumber}, customerName = {customerName}");
+                        WriteDebugLog(
+                            $"ProcessExcelFile: customerNumber = {customerNumber}, corpNumber = {corpNumber}, customerName = {customerName}");
 
                         if (rowNumber != 1)
                         {
@@ -346,7 +363,8 @@ namespace CmaFileWatcherService
 
                         WriteDebugLog($"ProcessExcelFile: startDate = {startDate}, endDate = {endDate}");
 
-                        using (SqlConnection connection = new SqlConnection("Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+                        using (SqlConnection connection = new SqlConnection(
+                                   "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
                         {
                             int nextSequence = connection.QueryFirstOrDefault<int>(
                                 "SELECT ISNULL(MAX(CMA_Sequence), 0) + 1 FROM Chap_CmaItems WHERE cust_num = @CustNum",
@@ -361,7 +379,8 @@ namespace CmaFileWatcherService
                                 string description = worksheet.Range["A" + currentRow].DisplayText;
                                 var proposedPriceValue = worksheet.Range[$"D{currentRow}"].Value;
                                 decimal sellPrice = 0;
-                                if (proposedPriceValue != null && decimal.TryParse(proposedPriceValue.ToString(), out sellPrice))
+                                if (proposedPriceValue != null &&
+                                    decimal.TryParse(proposedPriceValue.ToString(), out sellPrice))
                                 {
                                     // Successfully parsed the price
                                 }
@@ -416,7 +435,8 @@ namespace CmaFileWatcherService
 
                             string numRecsQuery = @"
                             SELECT COUNT(*) FROM Chap_CmaItems WHERE CmaFilename = @CmaFilename AND PCFNumber IS NULL";
-                            int numRecords = connection.QueryFirstOrDefault<int>(numRecsQuery, new { CmaFilename = archiveName });
+                            int numRecords =
+                                connection.QueryFirstOrDefault<int>(numRecsQuery, new { CmaFilename = archiveName });
 
                             WriteLog($"Number of records in Chap_CmaItems: {numRecords}");
                             WriteDebugLog($"ProcessExcelFile: Number of records in Chap_CmaItems: {numRecords}");
@@ -429,6 +449,7 @@ namespace CmaFileWatcherService
                                 {
                                     WriteLog(error);
                                 }
+
                                 WriteLog($"Failure {SenderEmail}, {baseFilename}, {validationErrors.Count}");
                                 SendValidationFailureEmail(SenderEmail, baseFilename, validationErrors);
 
@@ -450,15 +471,18 @@ namespace CmaFileWatcherService
                                 if (existingPCFint > 0)
                                 {
                                     var parametersR = new { OriginalPcfNum = existingPCFint };
-                                    connection.Execute("sp_ArchiveReplacedPCF", parametersR, commandType: System.Data.CommandType.StoredProcedure);
+                                    connection.Execute("sp_ArchiveReplacedPCF", parametersR,
+                                        commandType: System.Data.CommandType.StoredProcedure);
 
                                     var parametersN = new { CmaName = archiveName, PCFNum = existingPCFint };
-                                    connection.Execute("CreatePcfFromChapCmaItems_sp", parametersN, commandType: System.Data.CommandType.StoredProcedure);
+                                    connection.Execute("CreatePcfFromChapCmaItems_sp", parametersN,
+                                        commandType: System.Data.CommandType.StoredProcedure);
                                 }
                                 else
                                 {
                                     var parameters = new { CmaName = archiveName, PCFNum = 0 };
-                                    connection.Execute("CreatePcfFromChapCmaItems_sp", parameters, commandType: System.Data.CommandType.StoredProcedure);
+                                    connection.Execute("CreatePcfFromChapCmaItems_sp", parameters,
+                                        commandType: System.Data.CommandType.StoredProcedure);
                                 }
                             }
 
@@ -478,8 +502,10 @@ namespace CmaFileWatcherService
                                 {
                                     Directory.CreateDirectory(archiveFolderPath);
                                 }
+
                                 string newFilePath = Path.Combine(archiveFolderPath, archiveName);
-                                using (FileStream outputStream = new FileStream(newFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                                using (FileStream outputStream = new FileStream(newFilePath, FileMode.Create,
+                                           FileAccess.Write, FileShare.None))
                                 {
                                     workbook.SaveAs(outputStream);
                                 }
@@ -492,8 +518,10 @@ namespace CmaFileWatcherService
                                 {
                                     Directory.CreateDirectory(archiveFolderPath);
                                 }
+
                                 string newFilePath = Path.Combine(archiveFolderPath, archiveName);
-                                using (FileStream outputStream = new FileStream(newFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                                using (FileStream outputStream = new FileStream(newFilePath, FileMode.Create,
+                                           FileAccess.Write, FileShare.None))
                                 {
                                     workbook.SaveAs(outputStream);
                                 }
@@ -524,16 +552,20 @@ namespace CmaFileWatcherService
                         }
                         else
                         {
-                            Console.WriteLine("File was not found in Processed or Rejected folders. Skipping deletion.");
+                            Console.WriteLine(
+                                "File was not found in Processed or Rejected folders. Skipping deletion.");
                         }
                     }
                 }
-        catch (Exception ex)
+
+            }
+            catch (Exception ex)
             {
-                WriteLog($"Unhandled exception in ProcessExcelFile: {ex.Message}");
-                WriteDebugLog($"Unhandled exception in ProcessExcelFile: {ex.Message}");
+                WriteLog($"Unhandled exception in ProcessExcelFile: {ex}");
+                WriteDebugLog($"Unhandled exception in ProcessExcelFile: {ex}");
                 throw; // Re-throw the exception to ensure it is logged in the calling method
             }
+        }
 
         private void WriteLog(string message)
         {
