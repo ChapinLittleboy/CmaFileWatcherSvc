@@ -249,6 +249,7 @@ namespace CmaFileWatcherService
                         WriteDebugLog($"ProcessExcelFile: Firstrow set to: {rowNumber}");
 
                         RowWithPcfTypeHeading = 1;
+
                         while (true)
                         {
                             var teststring = worksheet.Range["B" + RowWithPcfTypeHeading].DisplayText;
@@ -288,19 +289,40 @@ namespace CmaFileWatcherService
                         WriteDebugLog(
                             $"promoFreightTermsOtherAmtText extracted from Cell D{(rowNumber != 1 ? 5 : 2)}: {promoFreightTermsOtherAmtText}");
 
+                        string corpNumber = string.Empty;
+                        string customerNumber = string.Empty;
+                        string customerName = string.Empty;
 
-                        string customerNumber = worksheet.Range["B" + (rowNumber + 2)].DisplayText;
-                        WriteDebugLog($"customerNumber extracted from Cell B{rowNumber + 2}: {customerNumber}");
+
+
+                        if (worksheet.Range["A10"].DisplayText == "Sales Manager")
+                        {
+                            WriteDebugLog($"A10 has --{worksheet.Range["D10"].DisplayText}--");
+                            customerNumber = worksheet.Range["B" + (rowNumber + 2 - 1)].DisplayText;
+                            WriteDebugLog($"customerNumber extracted from Cell B{rowNumber + 2 - 1}: {customerNumber}");
+                            corpNumber = "";
+                            WriteDebugLog($"corpNumber and CorpNum Not used in this CMA");
+                            customerName = worksheet.Range["B8"].DisplayText;
+                            WriteDebugLog($"customerName extracted from Cell B{rowNumber}: {customerName}");
+                        }
+                        else
+                        {
+                            WriteDebugLog($"A10x has --{worksheet.Range["D10"].DisplayText}--");
+                            customerNumber = worksheet.Range["B" + (rowNumber + 2)].DisplayText;
+                            WriteDebugLog($"customerNumber extracted from Cell B{rowNumber + 2}: {customerNumber}");
+                            corpNumber = worksheet.Range["B" + (rowNumber + 1)].DisplayText;
+                            WriteDebugLog($"corpNumber and CorpNum extracted from Cell B{rowNumber + 1}: {corpNumber}");
+                            customerName = worksheet.Range["B" + rowNumber].DisplayText;
+                            WriteDebugLog($"customerName extracted from Cell B{rowNumber}: {customerName}");
+                        }
 
                         CustNum = customerNumber;
                         WriteDebugLog($"CustNum set to {CustNum}");
 
-                        string corpNumber = worksheet.Range["B" + (rowNumber + 1)].DisplayText;
-                        WriteDebugLog($"corpNumber and CorpNum extracted from Cell B{rowNumber + 1}: {corpNumber}");
+
 
                         CorpNum = corpNumber;
-                        string customerName = worksheet.Range["B" + rowNumber].DisplayText;
-                        WriteDebugLog($"customerName extracted from Cell B{rowNumber}: {customerName}");
+
 
                         customerNumber = !string.IsNullOrEmpty(customerNumber) ? customerNumber : corpNumber;
                         WriteDebugLog($"customerNumber [cust vs corp] now set to : {customerNumber}");
@@ -532,28 +554,43 @@ namespace CmaFileWatcherService
 
                         WriteLog($"File processed successfully: {filePath}");
                         WriteDebugLog($"ProcessExcelFile: File processed successfully: {filePath}");
+                        // Ensure the workbook and inputStream are properly disposed of
+                        workbook.Close();
+                        excelEngine.Dispose();
+                        inputStream.Close();
+                        inputStream.Dispose();
 
                         string processedFolder = Path.Combine(_folderPath, "Processed");
                         string rejectedFolder = Path.Combine(_folderPath, "Rejected");
                         string processedFilePath = Path.Combine(processedFolder, archiveName);
                         string rejectedFilePath = Path.Combine(rejectedFolder, archiveName);
 
-                        if (File.Exists(processedFilePath) || File.Exists(rejectedFilePath))
+                        try
                         {
-                            if (File.Exists(filePath))
+
+
+                            if (File.Exists(processedFilePath) || File.Exists(rejectedFilePath))
                             {
-                                File.Delete(filePath);
-                                Console.WriteLine($"Original file deleted: {filePath}");
+                                if (File.Exists(filePath))
+                                {
+                                    File.Delete(filePath);
+                                    Console.WriteLine($"Original file deleted: {filePath}");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Original file does not exist, skipping deletion.");
+                                }
                             }
                             else
                             {
-                                Console.WriteLine("Original file does not exist, skipping deletion.");
+                                Console.WriteLine(
+                                    "File was not found in Processed or Rejected folders. Skipping deletion.");
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            Console.WriteLine(
-                                "File was not found in Processed or Rejected folders. Skipping deletion.");
+                            WriteLog($"Error deleting original file: {ex.Message}");
+                            WriteDebugLog($"ProcessExcelFile: Error deleting original file: {ex.Message}");
                         }
                     }
                 }
