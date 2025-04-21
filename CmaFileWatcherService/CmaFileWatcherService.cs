@@ -18,7 +18,7 @@ namespace CmaFileWatcherService
     /*
     cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
     sc stop CmaFileWatcherService
-    sc delete CmaFileWatcherService
+    "sc delete CmaFileWatcherService"
     sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
     sc start CmaFileWatcherService
 
@@ -412,16 +412,8 @@ namespace CmaFileWatcherService
                                 }
 
                                 int? replacesValue = (existingPCFint > 0) ? existingPCFint : (int?)null;
-                                string combinedQuery = @"
-                                INSERT INTO Chap_CmaItems 
-                                (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, 
-                                Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, 
-                                PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail, ReplacesPCF, GenNotes)
-                                VALUES 
-                                (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item,
-                                @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsOtherText, @SenderEmail,
-                                @ReplacesPCF, @GenNotes)";
-                                connection.Execute(combinedQuery, new
+
+                                var parameters = new
                                 {
                                     Cust_name = customerName,
                                     Cust_num = customerNumber,
@@ -445,7 +437,21 @@ namespace CmaFileWatcherService
                                     SenderEmail = SenderEmail,
                                     ReplacesPCF = replacesValue,
                                     GenNotes = GenNotes
-                                });
+                                };
+
+                                // Log the parameters for debugging
+                                WriteDebugLog($"Parameters: {string.Join(", ", parameters.GetType().GetProperties().Select(p => $"{p.Name} = {p.GetValue(parameters)}"))}");
+
+                                string combinedQuery = @"
+                                INSERT INTO Chap_CmaItems 
+                                (Cust_name, Cust_num, CMA_Sequence, BuyingGroup, StartDate, EndDate, SubmittedBy, Site, 
+                                Corp_flag, CmaFilename, Status, Item, Description, SellPrice, PromoTermsText, PromoFreightTermsText, 
+                                PromoFreightMinimumsText, PcfTypeText, PromoFreightMinimumsOtherText, SenderEmail, ReplacesPCF, GenNotes)
+                                VALUES 
+                                (@Cust_name, @Cust_num, @CMA_Sequence, @BuyingGroup, @StartDate, @EndDate, @SubmittedBy, @Site, @Corp_flag, @CmaFilename, @Status, @Item,
+                                @Description, @SellPrice, @PromoTermsText, @PromoFreightTermsText, @PromoFreightMinimumsText, @PcfTypeText, @PromoFreightMinimumsOtherText, @SenderEmail,
+                                @ReplacesPCF, @GenNotes)";
+                                connection.Execute(combinedQuery, parameters);
                                 WriteDebugLog($"cmaitems add Query: {combinedQuery}");
                                 currentRow++;
                             }
