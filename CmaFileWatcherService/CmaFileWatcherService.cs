@@ -791,7 +791,12 @@ Sales Operations Team";
             // Use regex to extract the part after "_sentby_" and before the extension
             //var match = Regex.Match(filename, @"_sentby_([\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,})");
             //var match = Regex.Match(filename, @"_sentby_([\w\.-]+@[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,})\b");
-            var match = Regex.Match(filename, @"_sentby_([\w\.-]+@chapinmfg\.com)", RegexOptions.IgnoreCase);
+            //var match = Regex.Match(filename, @"_sentby_([\w\.-]+@chapinmfg\.com)", RegexOptions.IgnoreCase);
+            var match = Regex.Match(
+                filename,
+                @"_sentby_([\w\.-]+@(chapinmfg|chapinusa)\.com)",
+                RegexOptions.IgnoreCase
+            );
 
             return match.Success ? match.Groups[1].Value : "";
         }
