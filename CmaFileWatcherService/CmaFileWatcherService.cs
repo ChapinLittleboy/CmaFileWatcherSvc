@@ -16,13 +16,32 @@ using System.Threading.Tasks;
 namespace CmaFileWatcherService
 {
     /*
-    cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
-    sc stop CmaFileWatcherService
-    "sc delete CmaFileWatcherService"
-    sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
-    sc start CmaFileWatcherService
+    --cd \source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug
+    --sc stop CmaFileWatcherService
+    --"sc delete CmaFileWatcherService"
+    --sc create CmaFileWatcherService binPath= "D:\source\repos\CmaFileWatcherSvc\CmaFileWatcherService\bin\Debug\CmaFileWatcherService.exe" obj= "NT AUTHORITY\NetworkService" type= own start= auto
+    --sc start CmaFileWatcherService
 
+    --sc query CmaFileWatcherService
+
+
+    NOTE: Service is now running on CIIWS01  
+    Copy compiled exe to \\ciiws01\C$\CmaFileWatcher\
+    As Admin in CMD:
+    Run   sc stop CmaFileWatcherService
+       If the service is stuck stopping, you can force-kill the process (optional):       
+       taskkill /F /IM CmaFileWatcherService.exe
+
+    sc delete CmaFileWatcherService
+    sc create CmaFileWatcherService binPath= "C:\CmaFileWatcher\CmaFileWatcherService.exe" start= auto
+    
+    sc start CmaFileWatcherService
     sc query CmaFileWatcherService
+
+
+
+
+
     */
 
     public partial class CmaFileWatcherService : ServiceBase
