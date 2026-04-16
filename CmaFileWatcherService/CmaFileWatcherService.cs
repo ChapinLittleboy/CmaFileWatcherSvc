@@ -405,7 +405,7 @@ namespace CmaFileWatcherService
                         WriteDebugLog($"ProcessExcelFile: startDate = {startDate}, endDate = {endDate}");
 
                         using (SqlConnection connection = new SqlConnection(
-                                   "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+                                   "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='MyNewPassword';TrustServerCertificate=True;"))
                         {
                             int nextSequence = connection.QueryFirstOrDefault<int>(
                                 "SELECT ISNULL(MAX(CMA_Sequence), 0) + 1 FROM Chap_CmaItems WHERE cust_num = @CustNum",
@@ -676,7 +676,7 @@ Sales Operations Team";
 
             using (SqlConnection _dbConnection =
                    new SqlConnection(
-                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='MyNewPassword';TrustServerCertificate=True;"))
             {
 
                 // Send email using SQL Server Database Mail (dbMail)
@@ -730,7 +730,7 @@ Sales Operations Team";
 
             using (SqlConnection _dbConnection =
                    new SqlConnection(
-                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='MyNewPassword';TrustServerCertificate=True;"))
             {
                 // Send email using SQL Server Database Mail (dbMail)
                 _dbConnection.Execute(@"
@@ -777,7 +777,7 @@ Sales Operations Team";
 
             using (SqlConnection _dbConnection =
                    new SqlConnection(
-                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='*id10t*';TrustServerCertificate=True;"))
+                       "Data Source=ciisql10;Database=BAT_App;User Id=sa;Password='MyNewPassword';TrustServerCertificate=True;"))
             {
 
                 // Send email using SQL Server Database Mail (dbMail)
